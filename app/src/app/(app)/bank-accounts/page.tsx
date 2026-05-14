@@ -26,7 +26,7 @@ const THAI_BANKS: { code: string; name: string }[] = [
 ];
 
 const selectClass =
-  "flex h-12 w-full rounded-md border-[1.5px] border-hairline-light bg-surface-card px-4 text-[16px] text-ink focus:outline-none focus:border-primary focus:border-[2.5px]";
+  "flex h-10 w-full rounded-md border-[1.5px] border-hairline-light bg-surface-card px-3 text-[14px] text-ink focus:outline-none focus:border-primary focus:border-[2.5px]";
 
 export default async function BankAccountsPage() {
   const supabase = await createClient();
@@ -87,7 +87,7 @@ export default async function BankAccountsPage() {
                 return (
                   <li key={b.id} className="flex items-center justify-between gap-3 px-5 py-4">
                     <div className="min-w-0">
-                      <p className="text-[18px] font-medium text-ink truncate">{b.nickname}</p>
+                      <p className="text-[15px] font-medium text-ink truncate">{b.nickname}</p>
                       <p className="caption-md text-mute-light">{bankName} · {b.account_number}</p>
                     </div>
                     <form

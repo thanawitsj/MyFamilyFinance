@@ -81,7 +81,7 @@ export default async function IncomesPage() {
               {incomes.map((i) => (
                 <li key={i.id} className="flex items-center justify-between gap-3 px-5 py-4">
                   <div className="min-w-0">
-                    <span className="inline-flex items-center rounded-full bg-tint-mint text-tint-mint-fg border-[1.5px] border-hairline-light px-3 py-1 text-[16px] font-semibold tabular">
+                    <span className="inline-flex items-center rounded-full bg-tint-mint text-tint-mint-fg border-[1.5px] border-hairline-light px-2.5 py-0.5 text-[13px] font-semibold tabular">
                       {formatTHB(i.amount)}
                     </span>
                     <p className="caption-md text-mute-light mt-1">

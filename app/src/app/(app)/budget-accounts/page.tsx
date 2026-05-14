@@ -77,7 +77,7 @@ export default async function BudgetAccountsPage() {
                   <li key={a.id} className="px-5 py-4 space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[18px] font-medium text-ink">
+                        <p className="text-[15px] font-medium text-ink">
                           {a.name}
                           {a.is_archived && (
                             <span className="ml-2 caption-sm text-mute-light">(archived)</span>

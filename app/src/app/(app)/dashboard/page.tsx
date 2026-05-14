@@ -112,7 +112,7 @@ export default async function DashboardPage() {
                     className="flex items-center justify-between gap-3 px-5 py-4"
                   >
                     <div className="min-w-0">
-                      <p className="text-[18px] font-medium text-ink truncate">
+                      <p className="text-[15px] font-medium text-ink truncate">
                         {row.budget_account_name}
                       </p>
                       <p className="caption-md text-mute-light mt-0.5">
@@ -121,7 +121,7 @@ export default async function DashboardPage() {
                         {formatTHB(row.expenses_total)}
                       </p>
                     </div>
-                    <p className={`tabular text-[18px] font-semibold ml-4 ${toneText}`}>
+                    <p className={`tabular text-[15px] font-semibold ml-4 ${toneText}`}>
                       {formatTHB(remaining)}
                     </p>
                   </li>

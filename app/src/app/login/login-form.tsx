@@ -115,12 +115,12 @@ export function LoginForm() {
         </div>
 
         {error && (
-          <div className="rounded-md border-[1.5px] border-hairline-light bg-tint-coral text-tint-coral-fg px-3 py-2 text-[14px]">
+          <div className="rounded-md border-[1.5px] border-hairline-light bg-tint-coral text-tint-coral-fg px-3 py-2 text-[12px]">
             {error}
           </div>
         )}
         {info && (
-          <div className="rounded-md border-[1.5px] border-hairline-light bg-tint-mint text-tint-mint-fg px-3 py-2 text-[14px]">
+          <div className="rounded-md border-[1.5px] border-hairline-light bg-tint-mint text-tint-mint-fg px-3 py-2 text-[12px]">
             {info}
           </div>
         )}
@@ -141,7 +141,7 @@ export function LoginForm() {
           setError(null);
           setInfo(null);
         }}
-        className="mt-5 w-full text-center text-[14px] text-link-light hover:underline underline-offset-4"
+        className="mt-5 w-full text-center text-[12px] text-link-light hover:underline underline-offset-4"
       >
         {mode === "signin"
           ? "ยังไม่มีบัญชี? สมัครที่นี่"

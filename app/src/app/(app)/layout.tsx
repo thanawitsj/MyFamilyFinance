@@ -32,17 +32,17 @@ export default async function AppLayout({
     <div className="flex flex-1 flex-col bg-canvas-light">
       {/* Primary nav — full-bleed dark canvas */}
       <header className="sticky top-0 z-20 bg-canvas-dark text-on-dark">
-        <div className="mx-auto flex h-12 max-w-[1280px] items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-11 max-w-[1280px] items-center justify-between px-4 sm:px-6">
           <Link
             href="/dashboard"
-            className="text-[18px] font-medium tracking-[0.4px] text-on-dark"
+            className="text-[15px] font-medium tracking-[0.4px] text-on-dark"
           >
             MyFamilyFinance
           </Link>
           <form action="/auth/signout" method="post">
             <button
               type="submit"
-              className="text-[14px] font-normal text-on-dark-mute hover:text-on-dark"
+              className="text-[12px] font-normal text-on-dark-mute hover:text-on-dark"
             >
               ออกจากระบบ
             </button>
@@ -56,7 +56,7 @@ export default async function AppLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className="whitespace-nowrap px-3 py-2 text-[14px] font-normal text-on-dark-mute hover:text-on-dark"
+                className="whitespace-nowrap px-3 py-1.5 text-[12px] font-normal text-on-dark-mute hover:text-on-dark"
               >
                 {item.label}
               </Link>
@@ -65,7 +65,7 @@ export default async function AppLayout({
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 sm:px-6 sm:py-10">
+      <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-5 sm:px-6 sm:py-8">
         {children}
       </main>
     </div>

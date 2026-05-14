@@ -121,7 +121,7 @@ export default async function AllocationsPage({
                       <input type="hidden" name="period_id" value={period.id} />
                       <input type="hidden" name="budget_account_id" value={a.id} />
                       <div className="flex-1">
-                        <p className="text-[16px] font-medium text-ink mb-2">{a.name}</p>
+                        <p className="text-[14px] font-medium text-ink mb-2">{a.name}</p>
                         <Input
                           name="amount"
                           type="number"

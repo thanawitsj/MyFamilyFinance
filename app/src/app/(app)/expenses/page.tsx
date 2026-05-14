@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { createExpense, deleteExpense } from "./actions";
 
 const selectClass =
-  "flex h-12 w-full rounded-md border-[1.5px] border-hairline-light bg-surface-card px-4 text-[16px] text-ink focus:outline-none focus:border-primary focus:border-[2.5px]";
+  "flex h-10 w-full rounded-md border-[1.5px] border-hairline-light bg-surface-card px-3 text-[14px] text-ink focus:outline-none focus:border-primary focus:border-[2.5px]";
 
 export default async function ExpensesPage() {
   const supabase = await createClient();
@@ -106,7 +106,7 @@ export default async function ExpensesPage() {
                 return (
                   <li key={e.id} className="flex items-center justify-between gap-3 px-5 py-4">
                     <div className="min-w-0">
-                      <span className="inline-flex items-center rounded-full bg-tint-coral text-tint-coral-fg border-[1.5px] border-hairline-light px-3 py-1 text-[16px] font-semibold tabular">
+                      <span className="inline-flex items-center rounded-full bg-tint-coral text-tint-coral-fg border-[1.5px] border-hairline-light px-2.5 py-0.5 text-[13px] font-semibold tabular">
                         −{formatTHB(e.amount)}
                       </span>
                       <p className="caption-md text-mute-light mt-1">
