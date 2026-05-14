@@ -56,16 +56,51 @@ export async function toggleArchiveBudgetAccount(id: string, archived: boolean) 
 
 export async function deleteBudgetAccount(id: string) {
   const supabase = await createClient();
+
+  // Guard: refuse if linked to a bank or has any allocation/expense history.
+  const [linkRes, allocRes, expRes] = await Promise.all([
+    supabase
+      .from("budget_account_banks")
+      .select("budget_account_id")
+      .eq("budget_account_id", id)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("monthly_allocations")
+      .select("id")
+      .eq("budget_account_id", id)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("expenses")
+      .select("id")
+      .eq("budget_account_id", id)
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (linkRes.data) throw new Error("ลบไม่ได้ — มีการผูกธนาคารอยู่");
+  if (allocRes.data) throw new Error("ลบไม่ได้ — มีการลงรายรับ/จัดสรรแล้ว");
+  if (expRes.data) throw new Error("ลบไม่ได้ — มีการลงรายจ่ายแล้ว");
+
   const { error } = await supabase.from("budget_accounts").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/budget-accounts");
 }
 
-const renameSchema = z.object({
+const updateBudgetSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(100),
+  bank_account_id: z
+    .union([z.string().uuid(), z.literal(""), z.null()])
+    .optional(),
 });
 
+/**
+ * Updates a budget account's name + bank link in one call.
+ * Empty/missing bank_account_id = unlink any existing bank.
+ * Enforces 1 budget = 1 bank by replacing rather than inserting.
+ */
 export async function renameBudgetAccount(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -73,20 +108,42 @@ export async function renameBudgetAccount(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("unauthorized");
 
-  const parsed = renameSchema.safeParse({
+  const parsed = updateBudgetSchema.safeParse({
     id: formData.get("id"),
     name: formData.get("name"),
+    bank_account_id: formData.get("bank_account_id"),
   });
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "invalid");
 
-  const { error } = await supabase
+  const { id, name } = parsed.data;
+  const bankId =
+    parsed.data.bank_account_id && parsed.data.bank_account_id !== ""
+      ? parsed.data.bank_account_id
+      : null;
+
+  const { error: updErr } = await supabase
     .from("budget_accounts")
-    .update({ name: parsed.data.name })
-    .eq("id", parsed.data.id)
+    .update({ name })
+    .eq("id", id)
     .eq("user_id", user.id);
-  if (error) throw new Error(error.message);
+  if (updErr) throw new Error(updErr.message);
+
+  // 1 budget = 1 bank: always clear then optionally set
+  const { error: delErr } = await supabase
+    .from("budget_account_banks")
+    .delete()
+    .eq("budget_account_id", id);
+  if (delErr) throw new Error(delErr.message);
+
+  if (bankId) {
+    const { error: insErr } = await supabase
+      .from("budget_account_banks")
+      .insert({ budget_account_id: id, bank_account_id: bankId });
+    if (insErr) throw new Error(insErr.message);
+  }
 
   revalidatePath("/budget-accounts");
+  revalidatePath("/bank-accounts");
   revalidatePath("/dashboard");
 }
 
@@ -128,11 +185,20 @@ export async function moveBudgetAccount(id: string, direction: "up" | "down") {
 
 export async function linkBankToBudget(budgetAccountId: string, bankAccountId: string) {
   const supabase = await createClient();
+  // 1 budget = 1 bank — replace any existing link for this budget_account
+  const { error: delErr } = await supabase
+    .from("budget_account_banks")
+    .delete()
+    .eq("budget_account_id", budgetAccountId);
+  if (delErr) throw new Error(delErr.message);
+
   const { error } = await supabase
     .from("budget_account_banks")
     .insert({ budget_account_id: budgetAccountId, bank_account_id: bankAccountId });
   if (error) throw new Error(error.message);
+
   revalidatePath("/budget-accounts");
+  revalidatePath("/bank-accounts");
 }
 
 export async function unlinkBankFromBudget(

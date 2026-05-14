@@ -112,6 +112,21 @@ export default async function BankAccountsPage() {
                   .filter((l) => l.bank_account_id === b.id)
                   .map((l) => l.budget_account_id);
 
+                // 1 budget = 1 bank: hide budgets already linked to a DIFFERENT bank.
+                const linkedToOtherBank = new Set(
+                  links
+                    .filter((l) => l.bank_account_id !== b.id)
+                    .map((l) => l.budget_account_id),
+                );
+                const availableBudgets = budgets.filter(
+                  (bg) => !linkedToOtherBank.has(bg.id),
+                );
+
+                const canDelete = linkedBudgetIds.length === 0;
+                const deleteHint = canDelete
+                  ? undefined
+                  : "ลบไม่ได้ — มีบัญชีผูกอยู่กับธนาคารนี้";
+
                 return (
                   <li key={b.id} className="flex items-center justify-between gap-3 px-5 py-4">
                     <div className="min-w-0 flex-1">
@@ -125,7 +140,7 @@ export default async function BankAccountsPage() {
                     <div className="flex gap-2 shrink-0">
                       <EditBankDialog
                         bank={b}
-                        budgetAccounts={budgets}
+                        budgetAccounts={availableBudgets}
                         linkedBudgetIds={linkedBudgetIds}
                       />
                       <form
@@ -134,7 +149,13 @@ export default async function BankAccountsPage() {
                           await deleteBankAccount(b.id);
                         }}
                       >
-                        <Button type="submit" variant="ghost" size="sm">
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          disabled={!canDelete}
+                          title={deleteHint}
+                        >
                           ลบ
                         </Button>
                       </form>

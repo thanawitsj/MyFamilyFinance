@@ -7,11 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { renameBudgetAccount } from "./actions";
 
-interface Props {
-  account: { id: string; name: string };
+interface Bank {
+  id: string;
+  nickname: string;
+  bank_code: string;
 }
 
-export function EditBudgetDialog({ account }: Props) {
+interface Props {
+  account: { id: string; name: string };
+  banks: Bank[];
+  currentBankId: string | null;
+}
+
+const selectClass =
+  "flex h-10 w-full rounded-md border-[1.5px] border-hairline-light bg-surface-card px-3 text-[14px] text-ink focus:outline-none focus:border-primary focus:border-[2.5px]";
+
+export function EditBudgetDialog({ account, banks, currentBankId }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +53,7 @@ export function EditBudgetDialog({ account }: Props) {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="แก้ไขชื่อบัญชี"
+        title="แก้ไขบัญชี"
       >
         <form action={handleSubmit} className="space-y-5">
           <input type="hidden" name="id" value={account.id} />
@@ -56,6 +67,26 @@ export function EditBudgetDialog({ account }: Props) {
               required
               autoFocus
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`edit-bank-${account.id}`}>ผูกกับธนาคาร</Label>
+            <select
+              id={`edit-bank-${account.id}`}
+              name="bank_account_id"
+              defaultValue={currentBankId ?? ""}
+              className={selectClass}
+            >
+              <option value="">— ไม่ผูก —</option>
+              {banks.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.nickname} ({b.bank_code})
+                </option>
+              ))}
+            </select>
+            <p className="caption-sm text-mute-light">
+              1 บัญชี ผูกได้ 1 ธนาคารเท่านั้น
+            </p>
           </div>
 
           {error && (

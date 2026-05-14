@@ -6,9 +6,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "หน้าหลัก" },
-  { href: "/incomes", label: "รายรับ" },
-  { href: "/allocations", label: "จัดสรร" },
-  { href: "/expenses", label: "รายจ่าย" },
+  { href: "/budget", label: "รายรับ-จ่าย" },
   { href: "/budget-accounts", label: "บัญชี" },
   { href: "/bank-accounts", label: "ธนาคาร" },
 ];
@@ -20,7 +18,9 @@ export function NavPills() {
     <nav className="border-t border-hairline-soft">
       <div className="mx-auto flex max-w-[1280px] gap-2.5 overflow-x-auto px-4 sm:px-6 py-3 no-scrollbar">
         {navItems.map((item) => {
-          const active = pathname.startsWith(item.href);
+          // Exact match or strict /child boundary — prevents /budget matching /budget-accounts
+          const active =
+            pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}

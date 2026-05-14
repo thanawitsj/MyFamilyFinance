@@ -6,10 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import {
   createBudgetAccount,
-  toggleArchiveBudgetAccount,
   deleteBudgetAccount,
-  linkBankToBudget,
-  unlinkBankFromBudget,
   moveBudgetAccount,
 } from "./actions";
 import { EditBudgetDialog } from "./edit-budget-dialog";
@@ -18,26 +15,39 @@ export default async function BudgetAccountsPage() {
   const user = await requireUser();
   const supabase = await createClient();
 
-  const [accountsRes, banksRes, linksRes] = await Promise.all([
-    supabase
-      .from("budget_accounts")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("sort_order")
-      .order("name"),
-    supabase
-      .from("bank_accounts")
-      .select("id, nickname, bank_code, account_number")
-      .eq("user_id", user.id)
-      .order("nickname"),
-    supabase
-      .from("budget_account_banks")
-      .select("budget_account_id, bank_account_id"),
-  ]);
+  const [accountsRes, banksRes, linksRes, allocsRes, expensesRes] =
+    await Promise.all([
+      supabase
+        .from("budget_accounts")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("sort_order")
+        .order("name"),
+      supabase
+        .from("bank_accounts")
+        .select("id, nickname, bank_code, account_number")
+        .eq("user_id", user.id)
+        .order("nickname"),
+      supabase
+        .from("budget_account_banks")
+        .select("budget_account_id, bank_account_id"),
+      supabase.from("monthly_allocations").select("budget_account_id"),
+      supabase
+        .from("expenses")
+        .select("budget_account_id")
+        .eq("user_id", user.id),
+    ]);
 
   const accounts = accountsRes.data ?? [];
   const banks = banksRes.data ?? [];
   const links = linksRes.data ?? [];
+
+  // budget_account_ids that have at least one allocation or expense row
+  const movedIds = new Set<string>([
+    ...((allocsRes.data ?? []).map((a) => a.budget_account_id)),
+    ...((expensesRes.data ?? []).map((e) => e.budget_account_id)),
+  ]);
+  const linkedBudgetIds = new Set(links.map((l) => l.budget_account_id));
 
   return (
     <div className="space-y-10">
@@ -77,128 +87,118 @@ export default async function BudgetAccountsPage() {
           <Card className="overflow-hidden">
             <ul className="divide-y-[1.5px] divide-hairline-light">
               {accounts.map((a, idx) => {
-                const linkedBankIds = new Set(
-                  links
-                    .filter((l) => l.budget_account_id === a.id)
-                    .map((l) => l.bank_account_id),
-                );
+                const linkedBankId = links.find(
+                  (l) => l.budget_account_id === a.id,
+                )?.bank_account_id;
+                const linkedBank = linkedBankId
+                  ? banks.find((b) => b.id === linkedBankId)
+                  : null;
                 const isFirst = idx === 0;
                 const isLast = idx === accounts.length - 1;
+                const hasMovement = movedIds.has(a.id);
+                const hasLink = linkedBudgetIds.has(a.id);
+                const canDelete = !hasMovement && !hasLink;
+                const deleteHint = !canDelete
+                  ? hasLink
+                    ? "ลบไม่ได้ — มีการผูกธนาคาร"
+                    : "ลบไม่ได้ — มีการลงรายรับ/จ่ายแล้ว"
+                  : undefined;
                 return (
-                  <li key={a.id} className="px-5 py-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        {/* Sequence number */}
-                        <span className="caption-sm tabular text-mute-light w-6 text-center shrink-0">
-                          {idx + 1}
-                        </span>
+                  <li
+                    key={a.id}
+                    className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 sm:w-56 shrink-0">
+                      <span className="caption-sm tabular text-mute-light w-6 text-center shrink-0">
+                        {idx + 1}
+                      </span>
 
-                        {/* Up/Down reorder */}
-                        <div className="flex flex-col gap-0.5 shrink-0">
-                          <form
-                            action={async () => {
-                              "use server";
-                              await moveBudgetAccount(a.id, "up");
-                            }}
+                      <div className="flex flex-col gap-0.5 shrink-0">
+                        <form
+                          action={async () => {
+                            "use server";
+                            await moveBudgetAccount(a.id, "up");
+                          }}
+                        >
+                          <button
+                            type="submit"
+                            disabled={isFirst}
+                            aria-label="ย้ายขึ้น"
+                            className="flex h-5 w-6 items-center justify-center rounded-sm border-[1.5px] border-hairline-light bg-surface-card hover:bg-surface-soft text-ink disabled:opacity-30 disabled:cursor-not-allowed"
                           >
-                            <button
-                              type="submit"
-                              disabled={isFirst}
-                              aria-label="ย้ายขึ้น"
-                              className="flex h-5 w-6 items-center justify-center rounded-sm border-[1.5px] border-hairline-light bg-surface-card hover:bg-surface-soft text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+                            <span
+                              aria-hidden="true"
+                              className="text-[10px] leading-none"
                             >
-                              <span aria-hidden="true" className="text-[10px] leading-none">
-                                ▲
-                              </span>
-                            </button>
-                          </form>
-                          <form
-                            action={async () => {
-                              "use server";
-                              await moveBudgetAccount(a.id, "down");
-                            }}
-                          >
-                            <button
-                              type="submit"
-                              disabled={isLast}
-                              aria-label="ย้ายลง"
-                              className="flex h-5 w-6 items-center justify-center rounded-sm border-[1.5px] border-hairline-light bg-surface-card hover:bg-surface-soft text-ink disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                              <span aria-hidden="true" className="text-[10px] leading-none">
-                                ▼
-                              </span>
-                            </button>
-                          </form>
-                        </div>
-
-                        <p className="text-[15px] font-medium text-ink truncate">
-                          {a.name}
-                          {a.is_archived && (
-                            <span className="ml-2 caption-sm text-mute-light">
-                              (archived)
+                              ▲
                             </span>
-                          )}
-                        </p>
+                          </button>
+                        </form>
+                        <form
+                          action={async () => {
+                            "use server";
+                            await moveBudgetAccount(a.id, "down");
+                          }}
+                        >
+                          <button
+                            type="submit"
+                            disabled={isLast}
+                            aria-label="ย้ายลง"
+                            className="flex h-5 w-6 items-center justify-center rounded-sm border-[1.5px] border-hairline-light bg-surface-card hover:bg-surface-soft text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="text-[10px] leading-none"
+                            >
+                              ▼
+                            </span>
+                          </button>
+                        </form>
                       </div>
 
-                      <div className="flex gap-2 shrink-0">
-                        <EditBudgetDialog account={a} />
-                        <form
-                          action={async () => {
-                            "use server";
-                            await toggleArchiveBudgetAccount(a.id, !a.is_archived);
-                          }}
-                        >
-                          <Button type="submit" variant="ghost" size="sm">
-                            {a.is_archived ? "เปิดใช้" : "เก็บ"}
-                          </Button>
-                        </form>
-                        <form
-                          action={async () => {
-                            "use server";
-                            await deleteBudgetAccount(a.id);
-                          }}
-                        >
-                          <Button type="submit" variant="ghost" size="sm">
-                            ลบ
-                          </Button>
-                        </form>
-                      </div>
+                      <p className="text-[15px] font-medium text-ink truncate">
+                        {a.name}
+                      </p>
                     </div>
 
-                    {banks.length > 0 && (
-                      <div className="space-y-2 pl-12">
-                        <p className="caption-sm text-mute-light uppercase tracking-[0.5px]">
-                          ผูกกับธนาคาร
+                    <div className="flex-1 min-w-0 sm:pl-0 pl-9">
+                      {linkedBank ? (
+                        <p className="text-[14px] text-ink truncate">
+                          {linkedBank.nickname}{" "}
+                          <span className="caption-sm text-mute-light">
+                            ({linkedBank.bank_code})
+                          </span>
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                          {banks.map((b) => {
-                            const linked = linkedBankIds.has(b.id);
-                            return (
-                              <form
-                                key={b.id}
-                                action={async () => {
-                                  "use server";
-                                  if (linked) {
-                                    await unlinkBankFromBudget(a.id, b.id);
-                                  } else {
-                                    await linkBankToBudget(a.id, b.id);
-                                  }
-                                }}
-                              >
-                                <Button
-                                  type="submit"
-                                  size="sm"
-                                  variant={linked ? "primary" : "secondary-light"}
-                                >
-                                  {b.nickname}
-                                </Button>
-                              </form>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                      ) : (
+                        <span className="caption-sm text-mute-light italic">
+                          ไม่ได้ผูกธนาคาร
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 shrink-0 sm:pl-0 pl-9">
+                      <EditBudgetDialog
+                        account={a}
+                        banks={banks}
+                        currentBankId={linkedBank?.id ?? null}
+                      />
+                      <form
+                        action={async () => {
+                          "use server";
+                          await deleteBudgetAccount(a.id);
+                        }}
+                      >
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          disabled={!canDelete}
+                          title={deleteHint}
+                        >
+                          ลบ
+                        </Button>
+                      </form>
+                    </div>
                   </li>
                 );
               })}
