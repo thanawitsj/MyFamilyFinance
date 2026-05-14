@@ -3,12 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrCreateCurrentPeriod } from "@/lib/period";
 import { formatMonthLabel, formatTHB } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { redirect } from "next/navigation";
 
 /**
- * Dashboard — light canvas utility surface following design.md.
- * Hero: display-md heading + 3-up summary band.
- * Per-account list: hairline-divided rows (no card chrome per row).
+ * Dashboard with pastel "sticker" cards.
+ *  - รายรับรวม → mint pastel
+ *  - จัดสรรแล้ว → lavender pastel
+ *  - ยังไม่ได้กระจาย → sky pastel (or cream if zero)
+ *  - per-account list wrapped in a single white card with hairline divider rows
  */
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -35,8 +38,10 @@ export default async function DashboardPage() {
   const pool = poolRes.data;
   const summary = summaryRes.data ?? [];
 
+  const unallocated = Number(pool?.unallocated_pool ?? 0);
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {/* Hero band */}
       <section>
         <p className="caption-md text-mute-light">งวดประจำเดือน</p>
@@ -48,18 +53,18 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* Pool summary — 3-up band */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-hairline-light rounded-md overflow-hidden border border-hairline-light">
-        <SummaryStat label="รายรับรวม" value={pool?.total_income} />
-        <SummaryStat label="จัดสรรแล้ว" value={pool?.total_allocated} />
-        <SummaryStat
+      {/* Pool summary — 3 pastel sticker cards */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <SummaryCard tone="mint" label="รายรับรวม" value={pool?.total_income} />
+        <SummaryCard tone="lavender" label="จัดสรรแล้ว" value={pool?.total_allocated} />
+        <SummaryCard
+          tone={unallocated > 0 ? "sky" : "cream"}
           label="ยังไม่ได้กระจาย"
           value={pool?.unallocated_pool}
-          tone={Number(pool?.unallocated_pool ?? 0) > 0 ? "primary" : "muted"}
         />
       </section>
 
-      {/* Quick actions — pill row */}
+      {/* Quick actions */}
       <section className="flex flex-wrap gap-3">
         <Link href="/incomes">
           <Button variant="primary" size="md">+ ลงรายรับ</Button>
@@ -72,7 +77,7 @@ export default async function DashboardPage() {
         </Link>
       </section>
 
-      {/* Per-account summary list */}
+      {/* Per-account list */}
       <section>
         <header className="mb-4">
           <h2 className="heading-lg text-ink">สรุปแต่ละบัญชี</h2>
@@ -82,76 +87,67 @@ export default async function DashboardPage() {
         </header>
 
         {summary.length === 0 ? (
-          <p className="body-sm text-body-light">
-            ยังไม่มีบัญชี —{" "}
-            <Link className="text-link-light underline-offset-4 hover:underline" href="/budget-accounts">
-              สร้างบัญชี
-            </Link>
-          </p>
+          <Card className="p-6">
+            <p className="body-sm text-body-light">
+              ยังไม่มีบัญชี —{" "}
+              <Link className="text-link-light underline-offset-4 hover:underline" href="/budget-accounts">
+                สร้างบัญชี
+              </Link>
+            </p>
+          </Card>
         ) : (
-          <ul className="border-y border-hairline-light divide-y divide-hairline-light">
-            {summary.map((row) => {
-              const remaining = Number(row.remaining ?? 0);
-              return (
-                <li
-                  key={row.budget_account_id}
-                  className="flex items-center justify-between py-4"
-                >
-                  <div className="min-w-0">
-                    <p className="text-[18px] font-medium text-ink truncate">
-                      {row.budget_account_name}
-                    </p>
-                    <p className="caption-md text-mute-light mt-0.5">
-                      ต้น {formatTHB(row.opening_balance)} · จัดสรร{" "}
-                      {formatTHB(row.allocation)} · ใช้{" "}
-                      {formatTHB(row.expenses_total)}
-                    </p>
-                  </div>
-                  <p
-                    className={
-                      "tabular text-[18px] font-medium tracking-[0.1px] ml-4 " +
-                      (remaining < 0
-                        ? "text-warning"
-                        : remaining === 0
-                          ? "text-mute-light"
-                          : "text-primary")
-                    }
+          <Card className="overflow-hidden">
+            <ul className="divide-y-[1.5px] divide-hairline-light">
+              {summary.map((row) => {
+                const remaining = Number(row.remaining ?? 0);
+                const toneText =
+                  remaining < 0
+                    ? "text-warning"
+                    : remaining === 0
+                      ? "text-mute-light"
+                      : "text-tint-mint-fg";
+                return (
+                  <li
+                    key={row.budget_account_id}
+                    className="flex items-center justify-between gap-3 px-5 py-4"
                   >
-                    {formatTHB(remaining)}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
+                    <div className="min-w-0">
+                      <p className="text-[18px] font-medium text-ink truncate">
+                        {row.budget_account_name}
+                      </p>
+                      <p className="caption-md text-mute-light mt-0.5">
+                        ต้น {formatTHB(row.opening_balance)} · จัดสรร{" "}
+                        {formatTHB(row.allocation)} · ใช้{" "}
+                        {formatTHB(row.expenses_total)}
+                      </p>
+                    </div>
+                    <p className={`tabular text-[18px] font-semibold ml-4 ${toneText}`}>
+                      {formatTHB(remaining)}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
         )}
       </section>
     </div>
   );
 }
 
-function SummaryStat({
+function SummaryCard({
+  tone,
   label,
   value,
-  tone = "default",
 }: {
+  tone: "mint" | "lavender" | "sky" | "cream";
   label: string;
   value: number | string | null | undefined;
-  tone?: "default" | "primary" | "muted";
 }) {
-  const toneClass =
-    tone === "primary"
-      ? "text-primary"
-      : tone === "muted"
-        ? "text-mute-light"
-        : "text-ink";
   return (
-    <div className="bg-canvas-light p-6">
-      <p className="caption-sm uppercase tracking-[0.5px] text-mute-light">
-        {label}
-      </p>
-      <p className={`mt-2 display-md tabular ${toneClass}`}>
-        {formatTHB(value)}
-      </p>
-    </div>
+    <Card tone={tone} className="p-5">
+      <p className="caption-sm uppercase tracking-[0.5px] opacity-80">{label}</p>
+      <p className="mt-2 display-md tabular">{formatTHB(value)}</p>
+    </Card>
   );
 }
