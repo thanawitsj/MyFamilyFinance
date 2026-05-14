@@ -2,6 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * App shell — primary nav follows design.md `primary-nav`:
+ * full-bleed canvas-dark, on-dark text in body-strong (18/500/0.4px), height ~48px.
+ * Sub-nav strip below in caption-md, horizontally scrollable on mobile.
+ */
 const navItems = [
   { href: "/dashboard", label: "หน้าหลัก" },
   { href: "/incomes", label: "รายรับ" },
@@ -24,35 +29,45 @@ export default async function AppLayout({
   if (!user) redirect("/login");
 
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 p-3">
-          <Link href="/dashboard" className="font-semibold">
+    <div className="flex flex-1 flex-col bg-canvas-light">
+      {/* Primary nav — full-bleed dark canvas */}
+      <header className="sticky top-0 z-20 bg-canvas-dark text-on-dark">
+        <div className="mx-auto flex h-12 max-w-[1280px] items-center justify-between px-4 sm:px-6">
+          <Link
+            href="/dashboard"
+            className="text-[18px] font-medium tracking-[0.4px] text-on-dark"
+          >
             MyFamilyFinance
           </Link>
           <form action="/auth/signout" method="post">
             <button
               type="submit"
-              className="text-sm text-muted-foreground hover:text-foreground"
+              className="text-[14px] font-normal text-on-dark-mute hover:text-on-dark"
             >
               ออกจากระบบ
             </button>
           </form>
         </div>
-        <nav className="mx-auto flex max-w-3xl overflow-x-auto px-3 pb-2 gap-1 text-sm">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-1.5 hover:bg-accent whitespace-nowrap"
-            >
-              {item.label}
-            </Link>
-          ))}
+
+        {/* Sub-nav strip */}
+        <nav className="border-t border-hairline-dark">
+          <div className="mx-auto flex max-w-[1280px] overflow-x-auto px-4 sm:px-6 no-scrollbar">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="whitespace-nowrap px-3 py-2 text-[14px] font-normal text-on-dark-mute hover:text-on-dark"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 p-3 sm:p-4">{children}</main>
+      <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 sm:px-6 sm:py-10">
+        {children}
+      </main>
     </div>
   );
 }

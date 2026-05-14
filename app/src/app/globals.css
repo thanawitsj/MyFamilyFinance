@@ -1,80 +1,242 @@
 @import "tailwindcss";
 
+/* =====================================================================
+   PlayStation-inspired design tokens (adapted from Design.md)
+   - Light canvas as default utility surface
+   - Dark canvas for primary nav / footer
+   - PlayStation Blue as universal primary CTA
+   - Flat: no resting shadows, hairline dividers only
+   ===================================================================== */
+
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
+  /* Brand & Accent */
   --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-primary-pressed: var(--primary-pressed);
+  --color-primary-active: var(--primary-active);
+  --color-on-primary: var(--on-primary);
+
+  --color-commerce: var(--commerce);
+  --color-commerce-pressed: var(--commerce-pressed);
+  --color-on-commerce: var(--on-commerce);
+
+  /* Surface */
+  --color-canvas-dark: var(--canvas-dark);
+  --color-canvas-light: var(--canvas-light);
+  --color-surface-dark-elevated: var(--surface-dark-elevated);
+  --color-surface-dark-card: var(--surface-dark-card);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-card: var(--surface-card);
+  --color-surface-filter: var(--surface-filter);
+
+  /* Hairline */
+  --color-hairline-light: var(--hairline-light);
+  --color-hairline-dark: var(--hairline-dark);
+
+  /* Text on light canvas */
+  --color-ink: var(--ink);
+  --color-ink-deep: var(--ink-deep);
+  --color-body-light: var(--body-light);
+  --color-mute-light: var(--mute-light);
+  --color-ash-light: var(--ash-light);
+
+  /* Text on dark canvas */
+  --color-on-dark: var(--on-dark);
+  --color-body-dark: var(--body-dark);
+  --color-on-dark-mute: var(--on-dark-mute);
+  --color-mute-dark: var(--mute-dark);
+
+  /* Semantic */
+  --color-warning: var(--warning);
+  --color-link-light: var(--link-light);
+  --color-link-dark: var(--link-dark);
+
+  /* Generic mapping used by Tailwind utilities */
+  --color-background: var(--canvas-light);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface-card);
+  --color-card-foreground: var(--ink);
+  --color-muted: var(--surface-soft);
+  --color-muted-foreground: var(--mute-light);
+  --color-accent: var(--surface-soft);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--warning);
+  --color-destructive-foreground: var(--on-dark);
+  --color-border: var(--hairline-light);
+  --color-input: var(--ash-light);
+  --color-ring: var(--primary);
+  --color-secondary: var(--surface-soft);
+  --color-secondary-foreground: var(--ink);
+
+  /* Font */
   --font-sans: var(--font-sarabun), system-ui, sans-serif;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Radius — 0 / 4 / 8 / 16 / pill */
+  --radius-none: 0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --primary: #0f766e;
-  --primary-foreground: #f0fdfa;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-  --destructive: #dc2626;
-  --destructive-foreground: #fef2f2;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #14b8a6;
-}
+  /* Brand */
+  --primary: #0070d1;
+  --primary-pressed: #0064b7;
+  --primary-active: #004d8d;
+  --on-primary: #ffffff;
+  --commerce: #d53b00;
+  --commerce-pressed: #aa2f00;
+  --on-commerce: #ffffff;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b1220;
-    --foreground: #f1f5f9;
-    --card: #111827;
-    --card-foreground: #f1f5f9;
-    --primary: #14b8a6;
-    --primary-foreground: #042f2e;
-    --secondary: #1e293b;
-    --secondary-foreground: #f1f5f9;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --accent: #1e293b;
-    --accent-foreground: #f1f5f9;
-    --destructive: #ef4444;
-    --destructive-foreground: #fef2f2;
-    --border: #1f2937;
-    --input: #1f2937;
-    --ring: #2dd4bf;
-  }
+  /* Surface */
+  --canvas-dark: #000000;
+  --canvas-light: #ffffff;
+  --surface-dark-elevated: #121314;
+  --surface-dark-card: #181818;
+  --surface-soft: #f3f3f3;
+  --surface-card: #f5f7fa;
+  --surface-filter: rgba(245, 247, 250, 0.3);
+
+  /* Hairline */
+  --hairline-light: #f3f3f3;
+  --hairline-dark: rgba(229, 229, 229, 0.2);
+
+  /* Text on light */
+  --ink: #000000;
+  --ink-deep: #121314;
+  --body-light: rgba(0, 0, 0, 0.6);
+  --mute-light: #6b6b6b;
+  --ash-light: #cccccc;
+
+  /* Text on dark */
+  --on-dark: #ffffff;
+  --body-dark: rgba(255, 255, 255, 0.7);
+  --on-dark-mute: #cccccc;
+  --mute-dark: rgba(229, 229, 229, 0.55);
+
+  /* Semantic */
+  --warning: #c81b3a;
+  --link-light: #0064b7;
+  --link-dark: #53b1ff;
 }
 
 * {
-  border-color: var(--border);
+  border-color: var(--hairline-light);
 }
 
 html,
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--canvas-light);
+  color: var(--ink);
   font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Display typography — light weight (300) is the brand voice */
+.display-xl {
+  font-size: clamp(28px, 5vw, 54px);
+  font-weight: 300;
+  line-height: 1.25;
+  letter-spacing: -0.1px;
+}
+
+.display-lg {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 300;
+  line-height: 1.25;
+  letter-spacing: 0.1px;
+}
+
+.display-md {
+  font-size: clamp(24px, 3.5vw, 35px);
+  font-weight: 300;
+  line-height: 1.25;
+}
+
+.heading-xl {
+  font-size: clamp(22px, 2.5vw, 28px);
+  font-weight: 300;
+  line-height: 1.25;
+  letter-spacing: 0.1px;
+}
+
+.heading-lg {
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1.25;
+  letter-spacing: 0.1px;
+}
+
+.heading-md {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.body-md {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.1px;
+}
+
+.body-strong {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0.4px;
+}
+
+.body-sm {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.caption-md {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.caption-sm {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.button-lg {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.45px;
+}
+
+.button-md {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.324px;
+}
+
+/* Tabular numerals for amounts */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Hide scrollbar but keep scrollability (used for sub-nav strip) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

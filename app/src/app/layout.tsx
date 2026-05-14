@@ -6,6 +6,7 @@ const sarabun = Sarabun({
   variable: "--font-sarabun",
   subsets: ["thai", "latin"],
   weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -21,10 +22,12 @@ export default function RootLayout({
   return (
     <html
       lang="th"
-      className={`${sarabun.variable} h-full antialiased`}
+      className={`${sarabun.variable} h-full`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-canvas-light text-ink">
+        {children}
+      </body>
     </html>
   );
 }

@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createBankAccount, deleteBankAccount } from "./actions";
 
 const THAI_BANKS: { code: string; name: string }[] = [
@@ -25,6 +24,9 @@ const THAI_BANKS: { code: string; name: string }[] = [
   { code: "OTHER", name: "อื่น ๆ" },
 ];
 
+const selectClass =
+  "flex h-12 w-full rounded-sm border border-ash-light bg-canvas-light px-4 text-[16px] text-ink focus:outline-none focus:border-primary focus:border-2";
+
 export default async function BankAccountsPage() {
   const supabase = await createClient();
   const {
@@ -39,81 +41,79 @@ export default async function BankAccountsPage() {
     .order("nickname");
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">บัญชีธนาคาร</h1>
+    <div className="space-y-12">
+      <header>
+        <p className="caption-md text-mute-light">ตั้งค่า</p>
+        <h1 className="display-md text-ink mt-2">บัญชีธนาคาร</h1>
+      </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">เพิ่มบัญชีธนาคาร</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={createBankAccount} className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="bank_code">ธนาคาร</Label>
-              <select
-                id="bank_code"
-                name="bank_code"
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                {THAI_BANKS.map((b) => (
-                  <option key={b.code} value={b.code}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="nickname">ชื่ออ้างอิง</Label>
-              <Input id="nickname" name="nickname" placeholder="เช่น บัญชีหลัก, ออมเงินเก็บ" required />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="account_number">เลขที่บัญชี</Label>
-              <Input id="account_number" name="account_number" inputMode="numeric" required />
-            </div>
-            <div className="sm:col-span-2">
-              <Button type="submit">เพิ่ม</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <section>
+        <h2 className="heading-md text-ink mb-4">เพิ่มบัญชีธนาคาร</h2>
+        <form action={createBankAccount} className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="bank_code">ธนาคาร</Label>
+            <select id="bank_code" name="bank_code" required className={selectClass}>
+              {THAI_BANKS.map((b) => (
+                <option key={b.code} value={b.code}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="nickname">ชื่ออ้างอิง</Label>
+            <Input
+              id="nickname"
+              name="nickname"
+              placeholder="เช่น บัญชีหลัก, ออมเงินเก็บ"
+              required
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="account_number">เลขที่บัญชี</Label>
+            <Input id="account_number" name="account_number" inputMode="numeric" required />
+          </div>
+          <div className="sm:col-span-2">
+            <Button type="submit" variant="primary" size="lg">
+              เพิ่ม
+            </Button>
+          </div>
+        </form>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">รายการบัญชีธนาคาร</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {(!banks || banks.length === 0) ? (
-            <p className="p-6 pt-0 text-sm text-muted-foreground">ยังไม่มีบัญชีธนาคาร</p>
-          ) : (
-            <ul className="divide-y">
-              {banks.map((b) => {
-                const bankName = THAI_BANKS.find((x) => x.code === b.bank_code)?.name ?? b.bank_code;
-                return (
-                  <li key={b.id} className="flex items-center justify-between p-4">
-                    <div>
-                      <p className="font-medium">{b.nickname}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {bankName} · {b.account_number}
-                      </p>
-                    </div>
-                    <form
-                      action={async () => {
-                        "use server";
-                        await deleteBankAccount(b.id);
-                      }}
-                    >
-                      <Button type="submit" variant="ghost" size="sm">
-                        ลบ
-                      </Button>
-                    </form>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <section>
+        <h2 className="heading-md text-ink mb-4">รายการบัญชีธนาคาร</h2>
+        {!banks || banks.length === 0 ? (
+          <p className="body-sm text-body-light">ยังไม่มีบัญชีธนาคาร</p>
+        ) : (
+          <ul className="border-y border-hairline-light divide-y divide-hairline-light">
+            {banks.map((b) => {
+              const bankName =
+                THAI_BANKS.find((x) => x.code === b.bank_code)?.name ?? b.bank_code;
+              return (
+                <li key={b.id} className="flex items-center justify-between py-4 gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[18px] font-medium text-ink truncate">{b.nickname}</p>
+                    <p className="caption-md text-mute-light">
+                      {bankName} · {b.account_number}
+                    </p>
+                  </div>
+                  <form
+                    action={async () => {
+                      "use server";
+                      await deleteBankAccount(b.id);
+                    }}
+                  >
+                    <Button type="submit" variant="ghost" size="sm">
+                      ลบ
+                    </Button>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

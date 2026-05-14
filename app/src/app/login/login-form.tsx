@@ -6,13 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export function LoginForm() {
   const router = useRouter();
@@ -54,7 +47,7 @@ export function LoginForm() {
         if (error) {
           setError(error.message);
         } else {
-          setInfo("ส่ง email ยืนยันให้แล้ว — โปรดเช็คกล่องจดหมาย");
+          setInfo("ส่ง email ยืนยันให้แล้ว — โปรดเช็คกล่องจดหมาย (หรือถ้าปิด confirm email ก็ login ได้เลย)");
         }
         return;
       }
@@ -70,84 +63,81 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>MyFamilyFinance</CardTitle>
-        <CardDescription>
+    <div className="w-full max-w-md">
+      <header className="mb-10">
+        <p className="caption-md text-mute-light">MyFamilyFinance</p>
+        <h1 className="display-md text-ink mt-2">
           {mode === "signin" ? "เข้าสู่ระบบ" : "สมัครบัญชีใหม่"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={handleGoogle}
-          disabled={pending}
-        >
-          เข้าสู่ระบบด้วย Google
-        </Button>
+        </h1>
+      </header>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-card px-2 text-muted-foreground">หรือ</span>
-          </div>
+      <Button
+        type="button"
+        variant="secondary-light"
+        size="lg"
+        onClick={handleGoogle}
+        disabled={pending}
+        className="w-full"
+      >
+        เข้าสู่ระบบด้วย Google
+      </Button>
+
+      <div className="my-6 flex items-center gap-3">
+        <span className="h-px flex-1 bg-hairline-light" />
+        <span className="caption-sm text-mute-light uppercase tracking-[1px]">หรือ</span>
+        <span className="h-px flex-1 bg-hairline-light" />
+      </div>
+
+      <form onSubmit={handleEmailPassword} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email">อีเมล</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">รหัสผ่าน</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            autoComplete={mode === "signin" ? "current-password" : "new-password"}
+          />
         </div>
 
-        <form onSubmit={handleEmailPassword} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="email">อีเมล</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password">รหัสผ่าน</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            />
-          </div>
+        {error && <p className="text-[14px] text-warning">{error}</p>}
+        {info && <p className="text-[14px] text-primary">{info}</p>}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {info && <p className="text-sm text-primary">{info}</p>}
+        <Button type="submit" variant="primary" size="lg" className="w-full" disabled={pending}>
+          {pending
+            ? "กำลังดำเนินการ..."
+            : mode === "signin"
+              ? "เข้าสู่ระบบ"
+              : "สมัคร"}
+        </Button>
+      </form>
 
-          <Button type="submit" className="w-full" disabled={pending}>
-            {pending
-              ? "กำลังดำเนินการ..."
-              : mode === "signin"
-                ? "เข้าสู่ระบบ"
-                : "สมัคร"}
-          </Button>
-        </form>
-
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === "signin" ? "signup" : "signin");
-            setError(null);
-            setInfo(null);
-          }}
-          className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
-        >
-          {mode === "signin"
-            ? "ยังไม่มีบัญชี? สมัครที่นี่"
-            : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ"}
-        </button>
-      </CardContent>
-    </Card>
+      <button
+        type="button"
+        onClick={() => {
+          setMode(mode === "signin" ? "signup" : "signin");
+          setError(null);
+          setInfo(null);
+        }}
+        className="mt-6 w-full text-center text-[14px] text-link-light hover:underline underline-offset-4"
+      >
+        {mode === "signin"
+          ? "ยังไม่มีบัญชี? สมัครที่นี่"
+          : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ"}
+      </button>
+    </div>
   );
 }
