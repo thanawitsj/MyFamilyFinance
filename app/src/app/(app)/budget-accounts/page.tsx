@@ -10,7 +10,9 @@ import {
   deleteBudgetAccount,
   linkBankToBudget,
   unlinkBankFromBudget,
+  moveBudgetAccount,
 } from "./actions";
+import { EditBudgetDialog } from "./edit-budget-dialog";
 
 export default async function BudgetAccountsPage() {
   const user = await requireUser();
@@ -46,12 +48,22 @@ export default async function BudgetAccountsPage() {
 
       <Card className="p-6">
         <h2 className="heading-md text-ink mb-4">เพิ่มบัญชีใหม่</h2>
-        <form action={createBudgetAccount} className="flex flex-col sm:flex-row gap-3 sm:items-end">
+        <form
+          action={createBudgetAccount}
+          className="flex flex-col sm:flex-row gap-3 sm:items-end"
+        >
           <div className="flex-1 space-y-2">
             <Label htmlFor="name">ชื่อบัญชี</Label>
-            <Input id="name" name="name" placeholder="ค่ากิน, เงินเก็บ, น้ำมัน, ..." required />
+            <Input
+              id="name"
+              name="name"
+              placeholder="ค่ากิน, เงินเก็บ, น้ำมัน, ..."
+              required
+            />
           </div>
-          <Button type="submit" variant="primary" size="lg">เพิ่ม</Button>
+          <Button type="submit" variant="primary" size="lg">
+            เพิ่ม
+          </Button>
         </form>
       </Card>
 
@@ -64,24 +76,73 @@ export default async function BudgetAccountsPage() {
         ) : (
           <Card className="overflow-hidden">
             <ul className="divide-y-[1.5px] divide-hairline-light">
-              {accounts.map((a) => {
+              {accounts.map((a, idx) => {
                 const linkedBankIds = new Set(
                   links
                     .filter((l) => l.budget_account_id === a.id)
                     .map((l) => l.bank_account_id),
                 );
+                const isFirst = idx === 0;
+                const isLast = idx === accounts.length - 1;
                 return (
                   <li key={a.id} className="px-5 py-4 space-y-3">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[15px] font-medium text-ink">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {/* Sequence number */}
+                        <span className="caption-sm tabular text-mute-light w-6 text-center shrink-0">
+                          {idx + 1}
+                        </span>
+
+                        {/* Up/Down reorder */}
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <form
+                            action={async () => {
+                              "use server";
+                              await moveBudgetAccount(a.id, "up");
+                            }}
+                          >
+                            <button
+                              type="submit"
+                              disabled={isFirst}
+                              aria-label="ย้ายขึ้น"
+                              className="flex h-5 w-6 items-center justify-center rounded-sm border-[1.5px] border-hairline-light bg-surface-card hover:bg-surface-soft text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <span aria-hidden="true" className="text-[10px] leading-none">
+                                ▲
+                              </span>
+                            </button>
+                          </form>
+                          <form
+                            action={async () => {
+                              "use server";
+                              await moveBudgetAccount(a.id, "down");
+                            }}
+                          >
+                            <button
+                              type="submit"
+                              disabled={isLast}
+                              aria-label="ย้ายลง"
+                              className="flex h-5 w-6 items-center justify-center rounded-sm border-[1.5px] border-hairline-light bg-surface-card hover:bg-surface-soft text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <span aria-hidden="true" className="text-[10px] leading-none">
+                                ▼
+                              </span>
+                            </button>
+                          </form>
+                        </div>
+
+                        <p className="text-[15px] font-medium text-ink truncate">
                           {a.name}
                           {a.is_archived && (
-                            <span className="ml-2 caption-sm text-mute-light">(archived)</span>
+                            <span className="ml-2 caption-sm text-mute-light">
+                              (archived)
+                            </span>
                           )}
                         </p>
                       </div>
+
                       <div className="flex gap-2 shrink-0">
+                        <EditBudgetDialog account={a} />
                         <form
                           action={async () => {
                             "use server";
@@ -98,13 +159,15 @@ export default async function BudgetAccountsPage() {
                             await deleteBudgetAccount(a.id);
                           }}
                         >
-                          <Button type="submit" variant="ghost" size="sm">ลบ</Button>
+                          <Button type="submit" variant="ghost" size="sm">
+                            ลบ
+                          </Button>
                         </form>
                       </div>
                     </div>
 
                     {banks.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="space-y-2 pl-12">
                         <p className="caption-sm text-mute-light uppercase tracking-[0.5px]">
                           ผูกกับธนาคาร
                         </p>
