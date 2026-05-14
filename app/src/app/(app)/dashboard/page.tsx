@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { getOrCreateCurrentPeriod } from "@/lib/period";
 import { formatMonthLabel, formatTHB } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { redirect } from "next/navigation";
 
 /**
  * Dashboard with pastel "sticker" cards.
@@ -14,12 +14,8 @@ import { redirect } from "next/navigation";
  *  - per-account list wrapped in a single white card with hairline divider rows
  */
 export default async function DashboardPage() {
+  const user = await requireUser();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
   const period = await getOrCreateCurrentPeriod(user.id);
 
   const [poolRes, summaryRes] = await Promise.all([

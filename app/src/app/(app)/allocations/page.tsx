@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { getOrCreateCurrentPeriod, getPeriodByMonth } from "@/lib/period";
 import { firstDayOfMonth, formatMonthLabel, formatTHB } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,8 @@ export default async function AllocationsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
+  const user = await requireUser();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const params = await searchParams;
   const periodMonth = params.month ? firstDayOfMonth(params.month) : firstDayOfMonth();

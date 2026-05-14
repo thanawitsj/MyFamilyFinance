@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { formatTHB } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,8 @@ const selectClass =
   "flex h-10 w-full rounded-md border-[1.5px] border-hairline-light bg-surface-card px-3 text-[14px] text-ink focus:outline-none focus:border-primary focus:border-[2.5px]";
 
 export default async function ExpensesPage() {
+  const user = await requireUser();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const [accountsRes, expensesRes] = await Promise.all([
     supabase
