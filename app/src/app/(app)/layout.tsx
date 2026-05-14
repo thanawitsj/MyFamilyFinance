@@ -30,33 +30,33 @@ export default async function AppLayout({
 
   return (
     <div className="flex flex-1 flex-col bg-canvas-light">
-      {/* Primary nav — full-bleed dark canvas */}
-      <header className="sticky top-0 z-20 bg-canvas-dark text-on-dark">
+      {/* Primary nav — soft icy-blue strip with dark teal text */}
+      <header className="sticky top-0 z-20 bg-surface-header text-ink border-b border-hairline-light">
         <div className="mx-auto flex h-11 max-w-[1280px] items-center justify-between px-4 sm:px-6">
           <Link
             href="/dashboard"
-            className="text-[15px] font-medium tracking-[0.4px] text-on-dark"
+            className="text-[15px] font-semibold tracking-[0.3px] text-ink-deep"
           >
             MyFamilyFinance
           </Link>
           <form action="/auth/signout" method="post">
             <button
               type="submit"
-              className="text-[12px] font-normal text-on-dark-mute hover:text-on-dark"
+              className="text-[12px] font-medium text-body-light hover:text-ink"
             >
               ออกจากระบบ
             </button>
           </form>
         </div>
 
-        {/* Sub-nav strip */}
-        <nav className="border-t border-hairline-dark">
-          <div className="mx-auto flex max-w-[1280px] overflow-x-auto px-4 sm:px-6 no-scrollbar">
+        {/* Sub-nav — colored pastel pills */}
+        <nav className="border-t border-hairline-soft">
+          <div className="mx-auto flex max-w-[1280px] gap-2 overflow-x-auto px-4 sm:px-6 py-2 no-scrollbar">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="whitespace-nowrap px-3 py-1.5 text-[12px] font-normal text-on-dark-mute hover:text-on-dark"
+                className="whitespace-nowrap rounded-full border-[1.5px] border-hairline-light bg-surface-card px-3 py-1 text-[12px] font-medium text-ink hover:bg-tint-coral hover:text-tint-coral-fg transition-colors"
               >
                 {item.label}
               </Link>
