@@ -5,13 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatTHB(amount: number | string) {
-  const n = typeof amount === "string" ? Number(amount) : amount;
+export function formatTHB(amount: number | string | null | undefined) {
+  const n =
+    amount == null
+      ? 0
+      : typeof amount === "string"
+        ? Number(amount)
+        : amount;
   return new Intl.NumberFormat("th-TH", {
     style: "currency",
     currency: "THB",
     minimumFractionDigits: 2,
-  }).format(n);
+  }).format(Number.isFinite(n) ? n : 0);
 }
 
 export function firstDayOfMonth(input: Date | string = new Date()): string {
