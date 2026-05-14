@@ -1,0 +1,36 @@
+# Obsidian local state (keep notes, drop workspace cache)
+MyFamilyFinance/.obsidian/workspace.json
+MyFamilyFinance/.obsidian/workspace-mobile.json
+
+# Next.js / Node (inside app/)
+app/node_modules/
+app/.next/
+app/out/
+app/build/
+app/.vercel/
+app/.turbo/
+
+# Env files
+app/.env*.local
+app/.env
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Supabase
+app/supabase/.branches
+app/supabase/.temp
+app/supabase/.env

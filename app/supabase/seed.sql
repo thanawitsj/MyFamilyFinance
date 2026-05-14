@@ -1,0 +1,3 @@
+-- Seed file — runs after migrations on `supabase db reset`.
+-- Intentionally empty: each user creates their own budget accounts via the UI.
+-- Add demo data here only for local development.
