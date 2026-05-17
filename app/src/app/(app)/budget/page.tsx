@@ -49,37 +49,49 @@ export default async function BudgetPage({
   }
 
   // Load everything in parallel
-  const [accountsRes, linksRes, banksRes, allocsRes, expensesAggRes, incomesRes] =
-    await Promise.all([
-      supabase
-        .from("budget_accounts")
-        .select("id, name, sort_order")
-        .eq("user_id", user.id)
-        .eq("is_archived", false)
-        .order("sort_order")
-        .order("name"),
-      supabase
-        .from("budget_account_banks")
-        .select("budget_account_id, bank_account_id"),
-      supabase
-        .from("bank_accounts")
-        .select("id, nickname, bank_code")
-        .eq("user_id", user.id),
-      supabase
-        .from("monthly_allocations")
-        .select("budget_account_id, amount")
-        .eq("period_id", periodId),
-      supabase
-        .from("expenses")
-        .select("budget_account_id, amount")
-        .eq("period_id", periodId),
-      supabase
-        .from("incomes")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("period_id", periodId)
-        .order("received_date", { ascending: false }),
-    ]);
+  const [
+    accountsRes,
+    linksRes,
+    banksRes,
+    allocsRes,
+    expensesAggRes,
+    incomesRes,
+    summaryRes,
+  ] = await Promise.all([
+    supabase
+      .from("budget_accounts")
+      .select("id, name, sort_order")
+      .eq("user_id", user.id)
+      .eq("is_archived", false)
+      .order("sort_order")
+      .order("name"),
+    supabase
+      .from("budget_account_banks")
+      .select("budget_account_id, bank_account_id"),
+    supabase
+      .from("bank_accounts")
+      .select("id, nickname, bank_code")
+      .eq("user_id", user.id),
+    supabase
+      .from("monthly_allocations")
+      .select("budget_account_id, amount")
+      .eq("period_id", periodId),
+    supabase
+      .from("expenses")
+      .select("budget_account_id, amount")
+      .eq("period_id", periodId),
+    supabase
+      .from("incomes")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("period_id", periodId)
+      .order("received_date", { ascending: false }),
+    supabase
+      .from("budget_account_monthly_summary")
+      .select("budget_account_id, opening_balance")
+      .eq("user_id", user.id)
+      .eq("period_id", periodId),
+  ]);
 
   const accounts = accountsRes.data ?? [];
   const links = linksRes.data ?? [];
@@ -103,11 +115,18 @@ export default async function BudgetPage({
     const cur = expenseTotalByAccount.get(e.budget_account_id) ?? 0;
     expenseTotalByAccount.set(e.budget_account_id, cur + Number(e.amount));
   }
+  const openingByAccount = new Map<string, number>();
+  for (const s of summaryRes.data ?? []) {
+    if (s.budget_account_id) {
+      openingByAccount.set(s.budget_account_id, Number(s.opening_balance ?? 0));
+    }
+  }
 
   const rows = accounts.map((a) => ({
     id: a.id,
     name: a.name,
     bank: bankByAccount.get(a.id) ?? null,
+    opening: openingByAccount.get(a.id) ?? 0,
     allocation: allocationByAccount.get(a.id) ?? 0,
     expense_total: expenseTotalByAccount.get(a.id) ?? 0,
   }));
@@ -116,6 +135,10 @@ export default async function BudgetPage({
 
   return (
     <BudgetEditor
+      // Remount whenever the viewed month changes so allocation/expense
+      // drafts (held in useState) reset to the new month's data — otherwise
+      // a stale draft from the prior month would overwrite the new month on save.
+      key={periodMonth}
       periodId={periodId}
       periodMonth={periodMonth}
       monthInput={dateToMonthInput(periodMonth)}

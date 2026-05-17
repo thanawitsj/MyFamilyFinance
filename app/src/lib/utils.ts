@@ -15,7 +15,8 @@ export function formatTHB(amount: number | string | null | undefined) {
   return new Intl.NumberFormat("th-TH", {
     style: "currency",
     currency: "THB",
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(Number.isFinite(n) ? n : 0);
 }
 

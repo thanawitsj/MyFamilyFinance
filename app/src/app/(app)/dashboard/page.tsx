@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import {
   dateToMonthInput,
   defaultMonthRange,
+  firstDayOfMonth,
   monthInputToDate,
 } from "@/lib/utils";
 import { TabNav, type TabKey } from "./tab-nav";
@@ -13,6 +14,7 @@ import { GraphView } from "./graph-view";
 
 type Search = {
   tab?: string;
+  month?: string;
   from?: string;
   to?: string;
 };
@@ -35,11 +37,22 @@ export default async function DashboardPage({
   const fromMonth = params.from ? monthInputToDate(params.from) : defaults.from;
   const toMonth = params.to ? monthInputToDate(params.to) : defaults.to;
 
+  // For the "current" tab — default to the live current month if no ?month given
+  const currentMonth = params.month
+    ? monthInputToDate(params.month)
+    : firstDayOfMonth();
+
   return (
     <div className="space-y-5">
       <TabNav active={tab} />
 
-      {tab === "current" && <CurrentView userId={user.id} />}
+      {tab === "current" && (
+        <CurrentView
+          userId={user.id}
+          periodMonth={currentMonth}
+          monthInput={dateToMonthInput(currentMonth)}
+        />
+      )}
 
       {tab !== "current" && (
         <>

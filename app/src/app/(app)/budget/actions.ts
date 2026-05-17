@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { firstDayOfMonth, lastDayOfMonth } from "@/lib/utils";
+import { firstDayOfMonth } from "@/lib/utils";
 
 /**
  * Bulk save the budget sheet for a month:
  * - Upserts monthly_allocations (one row per budget_account)
- * - Inserts new expense rows for any account with a non-zero "expense_to_add"
- * Both happen in a single server action so the table saves "ทีเดียวแล้วไปทั้งหมด".
+ * - Replaces expenses for each account: delete any existing rows for
+ *   (period, budget_account) then insert one row at the new amount.
+ *   This makes expenses edit-in-place rather than additive.
  */
 const saveSheetSchema = z.object({
   period_month: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -17,8 +18,7 @@ const saveSheetSchema = z.object({
     z.object({
       budget_account_id: z.string().uuid(),
       allocation: z.coerce.number().min(0),
-      expense_to_add: z.coerce.number().min(0).default(0),
-      expense_note: z.string().max(200).optional(),
+      expense: z.coerce.number().min(0).default(0),
     }),
   ),
 });
@@ -54,6 +54,26 @@ export async function saveBudgetSheet(payload: unknown) {
     periodId = created.id as string;
   }
 
+  // Guard: total allocations must not exceed total income for this period
+  const { data: incomesForPeriod, error: incErr } = await supabase
+    .from("incomes")
+    .select("amount")
+    .eq("user_id", user.id)
+    .eq("period_id", periodId!);
+  if (incErr) throw new Error(incErr.message);
+  const totalIncome = (incomesForPeriod ?? []).reduce(
+    (s, i) => s + Number(i.amount),
+    0,
+  );
+  const totalAlloc = rows.reduce((s, r) => s + r.allocation, 0);
+  const totalExpense = rows.reduce((s, r) => s + r.expense, 0);
+  if (totalAlloc > totalIncome) {
+    throw new Error("ลงบัญชีเกินรายรับ");
+  }
+  if (totalExpense > totalAlloc) {
+    throw new Error("รายจ่ายเกินลงบัญชี");
+  }
+
   // Upsert all allocations
   const allocRows = rows.map((r) => ({
     period_id: periodId!,
@@ -67,16 +87,28 @@ export async function saveBudgetSheet(payload: unknown) {
     if (allocErr) throw new Error(allocErr.message);
   }
 
-  // Insert one expense row per account with expense_to_add > 0
+  // Replace expenses for every account in this period — one row per account.
+  // Delete any existing rows for these accounts in this period, then insert
+  // a fresh row for each with amount > 0. Editing a value overwrites it.
+  const accountIds = rows.map((r) => r.budget_account_id);
+  if (accountIds.length > 0) {
+    const { error: delErr } = await supabase
+      .from("expenses")
+      .delete()
+      .eq("period_id", periodId!)
+      .in("budget_account_id", accountIds);
+    if (delErr) throw new Error(delErr.message);
+  }
+
   const newExpenses = rows
-    .filter((r) => r.expense_to_add > 0)
+    .filter((r) => r.expense > 0)
     .map((r) => ({
       user_id: user.id,
       period_id: periodId!,
       budget_account_id: r.budget_account_id,
-      amount: r.expense_to_add,
-      expense_date: lastDayOfMonth(period_month),
-      note: r.expense_note ?? "บันทึกจากตารางรายรับ-จ่าย",
+      amount: r.expense,
+      expense_date: period_month,
+      note: null,
     }));
   if (newExpenses.length > 0) {
     const { error: expErr } = await supabase.from("expenses").insert(newExpenses);
@@ -85,7 +117,6 @@ export async function saveBudgetSheet(payload: unknown) {
 
   revalidatePath("/budget");
   revalidatePath("/dashboard");
-  revalidatePath("/expenses");
 }
 
 // ──────────────────────────────────────────────────────────────────────────

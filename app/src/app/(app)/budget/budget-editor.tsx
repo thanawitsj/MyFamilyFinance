@@ -13,6 +13,7 @@ export interface BudgetRow {
   id: string;
   name: string;
   bank: { nickname: string; bank_code: string } | null;
+  opening: number; // carry-over from prior months (rollover)
   allocation: number; // current saved allocation
   expense_total: number; // sum of existing expenses this month
 }
@@ -38,31 +39,42 @@ export function BudgetEditor({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  // Local edit state — allocation drafts + new-expense drafts per row.
-  // Allocation displays "" when value is 0 so the input doesn't appear pre-filled.
+  // Local edit state — allocation + expense drafts per row.
+  // Both display "" when value is 0 so empty inputs don't show a leading 0.
   const [allocDrafts, setAllocDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       rows.map((r) => [r.id, r.allocation === 0 ? "" : String(r.allocation)]),
     ),
   );
   const [expenseDrafts, setExpenseDrafts] = useState<Record<string, string>>(
-    () => Object.fromEntries(rows.map((r) => [r.id, ""])),
+    () =>
+      Object.fromEntries(
+        rows.map((r) => [r.id, r.expense_total === 0 ? "" : String(r.expense_total)]),
+      ),
   );
 
-  // Auto-calc totals — reactive across all 4 cards
+  // Auto-calc totals — reactive across all 5 cards
   const totals = useMemo(() => {
+    const totalOpening = rows.reduce((s, r) => s + r.opening, 0);
     const totalAllocated = rows.reduce(
       (s, r) => s + (Number(allocDrafts[r.id] || 0) || 0),
       0,
     );
-    const existingExpense = rows.reduce((s, r) => s + r.expense_total, 0);
-    const newExpense = rows.reduce(
+    const totalExpense = rows.reduce(
       (s, r) => s + (Number(expenseDrafts[r.id] || 0) || 0),
       0,
     );
-    const totalExpense = existingExpense + newExpense;
-    const remaining = totalIncome - totalExpense;
-    return { totalAllocated, totalExpense, remaining };
+    const remaining = totalOpening + totalIncome - totalExpense;
+    const overAllocated = totalAllocated > totalIncome;
+    const overSpent = totalExpense > totalAllocated;
+    return {
+      totalOpening,
+      totalAllocated,
+      totalExpense,
+      remaining,
+      overAllocated,
+      overSpent,
+    };
   }, [rows, allocDrafts, expenseDrafts, totalIncome]);
 
   function handleMonthChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -74,6 +86,14 @@ export function BudgetEditor({
   function handleSave() {
     setError(null);
     setInfo(null);
+    if (totals.overAllocated) {
+      setError("ลงบัญชีเกินรายรับ — กรุณาลดยอดให้ไม่เกินรายรับก่อนบันทึก");
+      return;
+    }
+    if (totals.overSpent) {
+      setError("รายจ่ายเกินลงบัญชี — กรุณาลดยอดให้ไม่เกินลงบัญชีก่อนบันทึก");
+      return;
+    }
     startTransition(async () => {
       try {
         await saveBudgetSheet({
@@ -81,11 +101,10 @@ export function BudgetEditor({
           rows: rows.map((r) => ({
             budget_account_id: r.id,
             allocation: Number(allocDrafts[r.id] || 0) || 0,
-            expense_to_add: Number(expenseDrafts[r.id] || 0) || 0,
+            expense: Number(expenseDrafts[r.id] || 0) || 0,
           })),
         });
         setInfo("บันทึกแล้ว");
-        setExpenseDrafts(Object.fromEntries(rows.map((r) => [r.id, ""])));
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
@@ -127,42 +146,70 @@ export function BudgetEditor({
         </div>
       </header>
 
-      {/* Totals — reactive (4 cards) */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card tone="mint" className="p-4">
-          <p className="caption-sm uppercase tracking-[0.5px] opacity-80">
+      {/* Totals — reactive (5 cards, single line on mobile) */}
+      <section className="grid grid-cols-5 gap-1.5 md:gap-3">
+        <Card tone="default" className="p-1.5 md:p-4">
+          <p className="text-[10px] md:caption-sm md:uppercase md:tracking-[0.5px] opacity-80">
+            ยอดยกมา
+          </p>
+          <p className="mt-0.5 md:mt-1 text-[12px] md:text-[20px] tabular font-medium">
+            {formatTHB(totals.totalOpening)}
+          </p>
+        </Card>
+        <Card tone="mint" className="p-1.5 md:p-4">
+          <p className="text-[10px] md:caption-sm md:uppercase md:tracking-[0.5px] opacity-80">
             รายรับ
           </p>
-          <p className="mt-1 text-[20px] tabular font-medium">
+          <p className="mt-0.5 md:mt-1 text-[12px] md:text-[20px] tabular font-medium">
             {formatTHB(totalIncome)}
           </p>
         </Card>
-        <Card tone="lavender" className="p-4">
-          <p className="caption-sm uppercase tracking-[0.5px] opacity-80">
+        <Card tone="lavender" className="p-1.5 md:p-4">
+          <p className="text-[10px] md:caption-sm md:uppercase md:tracking-[0.5px] opacity-80">
             ลงบัญชี
           </p>
-          <p className="mt-1 text-[20px] tabular font-medium">
+          <p
+            className={
+              "mt-0.5 md:mt-1 text-[12px] md:text-[20px] tabular font-medium " +
+              (totals.overAllocated ? "text-warning" : "")
+            }
+          >
             {formatTHB(totals.totalAllocated)}
           </p>
+          {totals.overAllocated && (
+            <p className="hidden md:block caption-sm text-warning mt-1">
+              ลงบัญชีเกินรายรับ
+            </p>
+          )}
         </Card>
-        <Card tone="coral" className="p-4">
-          <p className="caption-sm uppercase tracking-[0.5px] opacity-80">
+        <Card tone="coral" className="p-1.5 md:p-4">
+          <p className="text-[10px] md:caption-sm md:uppercase md:tracking-[0.5px] opacity-80">
             รายจ่าย
           </p>
-          <p className="mt-1 text-[20px] tabular font-medium">
+          <p
+            className={
+              "mt-0.5 md:mt-1 text-[12px] md:text-[20px] tabular font-medium " +
+              (totals.overSpent ? "text-warning" : "")
+            }
+          >
             {formatTHB(totals.totalExpense)}
           </p>
+          {totals.overSpent && (
+            <p className="hidden md:block caption-sm text-warning mt-1">
+              รายจ่ายเกินลงบัญชี
+            </p>
+          )}
         </Card>
         <Card
           tone={totals.remaining > 0 ? "sky" : "cream"}
-          className="p-4"
+          className="p-1.5 md:p-4"
         >
-          <p className="caption-sm uppercase tracking-[0.5px] opacity-80">
+          <p className="text-[10px] md:caption-sm md:uppercase md:tracking-[0.5px] opacity-80">
             คงเหลือ
           </p>
           <p
             className={
-              "mt-1 text-[20px] tabular font-medium " +
+              "mt-0.5 md:mt-1 text-[12px] md:text-[20px] tabular font-medium " +
               (totals.remaining < 0 ? "text-warning" : "")
             }
           >
@@ -170,6 +217,17 @@ export function BudgetEditor({
           </p>
         </Card>
       </section>
+      {/* Mobile-only inline warnings (totals cards too compact to show them) */}
+      {(totals.overAllocated || totals.overSpent) && (
+        <div className="md:hidden space-y-1">
+          {totals.overAllocated && (
+            <p className="caption-sm text-warning">⚠ ลงบัญชีเกินรายรับ</p>
+          )}
+          {totals.overSpent && (
+            <p className="caption-sm text-warning">⚠ รายจ่ายเกินลงบัญชี</p>
+          )}
+        </div>
+      )}
 
       {/* Grid */}
       {rows.length === 0 ? (
@@ -180,47 +238,47 @@ export function BudgetEditor({
         </Card>
       ) : (
         <Card className="overflow-hidden">
-          {/* Header row (desktop) */}
-          <div className="hidden md:grid md:grid-cols-[1fr_140px_140px_120px_120px] gap-3 px-4 py-2 caption-sm uppercase tracking-[0.5px] text-mute-light border-b-[1.5px] border-hairline-light bg-surface-soft">
-            <span>บัญชี · ธนาคาร</span>
-            <span className="text-right">รายรับ</span>
-            <span className="text-right">รายจ่าย</span>
-            <span className="text-right">ใช้ไปแล้ว</span>
-            <span className="text-right">คงเหลือ</span>
-          </div>
+          {/* ═══ MOBILE (< md): compact single-line table ═══ */}
+          <div className="md:hidden">
+            {/* Column labels — name col + 5 numeric cols */}
+            <div className="grid grid-cols-[70px_repeat(5,1fr)] gap-1 px-2 py-2.5 text-[13px] font-semibold text-ink bg-surface-soft border-b-[1.5px] border-hairline-light">
+              <span>บัญชี</span>
+              <span className="text-right">ยกมา</span>
+              <span className="text-right">ลงบัญชี</span>
+              <span className="text-right">รวม</span>
+              <span className="text-right">จ่าย</span>
+              <span className="text-right">คงเหลือ</span>
+            </div>
 
-          <ul className="divide-y-[1.5px] divide-hairline-light">
-            {rows.map((r) => {
-              const alloc = Number(allocDrafts[r.id] || 0) || 0;
-              const newExp = Number(expenseDrafts[r.id] || 0) || 0;
-              const projectedSpent = r.expense_total + newExp;
-              const remaining = alloc - projectedSpent;
-              return (
-                <li
-                  key={r.id}
-                  className="grid grid-cols-2 md:grid-cols-[1fr_140px_140px_120px_120px] gap-2 md:gap-3 px-3 md:px-4 py-3 md:py-2 items-center"
-                >
-                  {/* Account name + bank */}
-                  <div className="col-span-2 md:col-span-1 min-w-0">
-                    <p className="text-[14px] font-medium text-ink truncate">
+            <ul className="divide-y-[1.5px] divide-hairline-light">
+              {rows.map((r) => {
+                const alloc = Number(allocDrafts[r.id] || 0) || 0;
+                const exp = Number(expenseDrafts[r.id] || 0) || 0;
+                const total = r.opening + alloc;
+                const remaining = total - exp;
+                const openingTone =
+                  r.opening < 0
+                    ? "text-warning"
+                    : r.opening === 0
+                      ? "text-mute-light"
+                      : "text-ink";
+                const remainingTone =
+                  remaining < 0
+                    ? "text-warning"
+                    : remaining === 0
+                      ? "text-mute-light"
+                      : "text-tint-mint-fg";
+                return (
+                  <li
+                    key={r.id}
+                    className="grid grid-cols-[70px_repeat(5,1fr)] gap-1 px-2 py-1.5 items-center"
+                  >
+                    <span className="text-[12px] font-medium text-ink truncate">
                       {r.name}
-                    </p>
-                    {r.bank ? (
-                      <p className="caption-sm text-mute-light truncate">
-                        {r.bank.nickname} ({r.bank.bank_code})
-                      </p>
-                    ) : (
-                      <p className="caption-sm text-mute-light italic">
-                        ไม่ผูกธนาคาร
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Allocation */}
-                  <div className="space-y-0.5">
-                    <span className="caption-sm text-mute-light md:hidden">
-                      รายรับ
                     </span>
+                    <div className={`text-right text-[12px] tabular ${openingTone}`}>
+                      {formatTHB(r.opening)}
+                    </div>
                     <Input
                       type="text"
                       inputMode="decimal"
@@ -237,63 +295,146 @@ export function BudgetEditor({
                           [r.id]: e.target.value.replace(/[^0-9.]/g, ""),
                         }))
                       }
-                      className="h-9 text-right tabular"
+                      className="h-8 px-1.5 text-[12px] text-right tabular"
                     />
-                  </div>
-
-                  {/* New expense */}
-                  <div className="space-y-0.5">
-                    <span className="caption-sm text-mute-light md:hidden">
-                      รายจ่าย
-                    </span>
+                    <div className="text-right text-[12px] tabular font-medium text-ink">
+                      {formatTHB(total)}
+                    </div>
                     <Input
                       type="text"
                       inputMode="decimal"
                       placeholder="0"
                       value={expenseDrafts[r.id] ?? ""}
+                      onFocus={(e) => {
+                        if (Number(e.target.value || 0) === 0) {
+                          setExpenseDrafts((d) => ({ ...d, [r.id]: "" }));
+                        }
+                      }}
                       onChange={(e) =>
                         setExpenseDrafts((d) => ({
                           ...d,
                           [r.id]: e.target.value.replace(/[^0-9.]/g, ""),
                         }))
                       }
-                      className="h-9 text-right tabular"
+                      className="h-8 px-1.5 text-[12px] text-right tabular"
                     />
-                  </div>
-
-                  {/* Spent so far (read-only) */}
-                  <div className="text-right">
-                    <span className="caption-sm text-mute-light md:hidden mr-2">
-                      ใช้ไปแล้ว
-                    </span>
-                    <span className="text-[14px] tabular text-tint-coral-fg">
-                      {formatTHB(projectedSpent)}
-                    </span>
-                  </div>
-
-                  {/* Remaining */}
-                  <div className="text-right">
-                    <span className="caption-sm text-mute-light md:hidden mr-2">
-                      คงเหลือ
-                    </span>
-                    <span
-                      className={
-                        "text-[14px] tabular font-semibold " +
-                        (remaining < 0
-                          ? "text-warning"
-                          : remaining === 0
-                            ? "text-mute-light"
-                            : "text-tint-mint-fg")
-                      }
+                    <div
+                      className={`text-right text-[12px] tabular font-semibold ${remainingTone}`}
                     >
                       {formatTHB(remaining)}
-                    </span>
-                  </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
 
-                </li>
-              );
-            })}
-          </ul>
+          {/* ═══ DESKTOP (md+): existing 6-col grid (unchanged) ═══════════ */}
+          <div className="hidden md:block">
+            <div className="grid grid-cols-[1fr_110px_140px_120px_140px_120px] gap-3 px-4 py-3 text-[14px] font-semibold text-ink border-b-[1.5px] border-hairline-light bg-surface-soft">
+              <span>บัญชี · ธนาคาร</span>
+              <span className="text-right">ยอดยกมา</span>
+              <span className="text-right">ลงบัญชี</span>
+              <span className="text-right">รวมเงิน</span>
+              <span className="text-right">รายจ่าย</span>
+              <span className="text-right">คงเหลือ</span>
+            </div>
+
+            <ul className="divide-y-[1.5px] divide-hairline-light">
+              {rows.map((r) => {
+                const alloc = Number(allocDrafts[r.id] || 0) || 0;
+                const exp = Number(expenseDrafts[r.id] || 0) || 0;
+                const total = r.opening + alloc;
+                const remaining = total - exp;
+                const openingTone =
+                  r.opening < 0
+                    ? "text-warning"
+                    : r.opening === 0
+                      ? "text-mute-light"
+                      : "text-ink";
+                const remainingTone =
+                  remaining < 0
+                    ? "text-warning"
+                    : remaining === 0
+                      ? "text-mute-light"
+                      : "text-tint-mint-fg";
+                return (
+                  <li
+                    key={r.id}
+                    className="grid grid-cols-[1fr_110px_140px_120px_140px_120px] gap-3 px-4 py-2 items-center"
+                  >
+                    <div className="min-w-0 flex items-baseline gap-2">
+                      <span className="text-[14px] font-medium text-ink truncate">
+                        {r.name}
+                      </span>
+                      {r.bank ? (
+                        <span className="caption-sm text-mute-light truncate">
+                          {r.bank.nickname} ({r.bank.bank_code})
+                        </span>
+                      ) : (
+                        <span className="caption-sm text-mute-light italic shrink-0">
+                          ไม่ผูก
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-[14px] tabular ${openingTone}`}>
+                        {formatTHB(r.opening)}
+                      </span>
+                    </div>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={allocDrafts[r.id] ?? ""}
+                      onFocus={(e) => {
+                        if (Number(e.target.value || 0) === 0) {
+                          setAllocDrafts((d) => ({ ...d, [r.id]: "" }));
+                        }
+                      }}
+                      onChange={(e) =>
+                        setAllocDrafts((d) => ({
+                          ...d,
+                          [r.id]: e.target.value.replace(/[^0-9.]/g, ""),
+                        }))
+                      }
+                      className="h-10 text-right tabular"
+                    />
+                    <div className="text-right">
+                      <span className="text-[14px] tabular font-medium text-ink">
+                        {formatTHB(total)}
+                      </span>
+                    </div>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={expenseDrafts[r.id] ?? ""}
+                      onFocus={(e) => {
+                        if (Number(e.target.value || 0) === 0) {
+                          setExpenseDrafts((d) => ({ ...d, [r.id]: "" }));
+                        }
+                      }}
+                      onChange={(e) =>
+                        setExpenseDrafts((d) => ({
+                          ...d,
+                          [r.id]: e.target.value.replace(/[^0-9.]/g, ""),
+                        }))
+                      }
+                      className="h-10 text-right tabular"
+                    />
+                    <div className="text-right">
+                      <span
+                        className={`text-[14px] tabular font-semibold ${remainingTone}`}
+                      >
+                        {formatTHB(remaining)}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </Card>
       )}
 
@@ -314,7 +455,19 @@ export function BudgetEditor({
           variant="primary"
           size="lg"
           onClick={handleSave}
-          disabled={pending || rows.length === 0}
+          disabled={
+            pending ||
+            rows.length === 0 ||
+            totals.overAllocated ||
+            totals.overSpent
+          }
+          title={
+            totals.overAllocated
+              ? "ลงบัญชีเกินรายรับ"
+              : totals.overSpent
+                ? "รายจ่ายเกินลงบัญชี"
+                : undefined
+          }
           className="w-full sm:w-auto"
         >
           {pending ? "กำลังบันทึก..." : "บันทึกทั้งหมด"}

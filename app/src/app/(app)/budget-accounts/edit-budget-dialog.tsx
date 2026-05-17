@@ -26,6 +26,18 @@ export function EditBudgetDialog({ account, banks, currentBankId }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Controlled select — uncontrolled defaultValue won't sync if the prop
+  // changes after first mount (e.g. user links a bank in another page then
+  // returns). Reset to the current value every time the dialog opens.
+  const [bankId, setBankId] = useState<string>(currentBankId ?? "");
+  const [name, setName] = useState<string>(account.name);
+
+  function openDialog() {
+    setBankId(currentBankId ?? "");
+    setName(account.name);
+    setError(null);
+    setOpen(true);
+  }
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -45,7 +57,7 @@ export function EditBudgetDialog({ account, banks, currentBankId }: Props) {
         type="button"
         variant="secondary-light"
         size="sm"
-        onClick={() => setOpen(true)}
+        onClick={openDialog}
       >
         แก้ไข
       </Button>
@@ -63,7 +75,8 @@ export function EditBudgetDialog({ account, banks, currentBankId }: Props) {
             <Input
               id={`edit-name-${account.id}`}
               name="name"
-              defaultValue={account.name}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               required
               autoFocus
             />
@@ -74,7 +87,8 @@ export function EditBudgetDialog({ account, banks, currentBankId }: Props) {
             <select
               id={`edit-bank-${account.id}`}
               name="bank_account_id"
-              defaultValue={currentBankId ?? ""}
+              value={bankId}
+              onChange={(e) => setBankId(e.target.value)}
               className={selectClass}
             >
               <option value="">— ไม่ผูก —</option>

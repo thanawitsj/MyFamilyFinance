@@ -31,8 +31,28 @@ export function EditBankDialog({ bank, budgetAccounts, linkedBudgetIds }: Props)
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Controlled fields — uncontrolled defaultValue/defaultChecked won't sync
+  // when props update after first mount. Reset on every open.
+  const [nickname, setNickname] = useState<string>(bank.nickname);
+  const [linkedSet, setLinkedSet] = useState<Set<string>>(
+    () => new Set(linkedBudgetIds),
+  );
 
-  const linkedSet = new Set(linkedBudgetIds);
+  function openDialog() {
+    setNickname(bank.nickname);
+    setLinkedSet(new Set(linkedBudgetIds));
+    setError(null);
+    setOpen(true);
+  }
+
+  function toggleLink(id: string, checked: boolean) {
+    setLinkedSet((s) => {
+      const next = new Set(s);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -52,7 +72,7 @@ export function EditBankDialog({ bank, budgetAccounts, linkedBudgetIds }: Props)
         type="button"
         variant="secondary-light"
         size="sm"
-        onClick={() => setOpen(true)}
+        onClick={openDialog}
       >
         แก้ไข
       </Button>
@@ -71,7 +91,8 @@ export function EditBankDialog({ bank, budgetAccounts, linkedBudgetIds }: Props)
             <Input
               id={`bank-nick-${bank.id}`}
               name="nickname"
-              defaultValue={bank.nickname}
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
               required
               autoFocus
             />
@@ -98,7 +119,8 @@ export function EditBankDialog({ bank, budgetAccounts, linkedBudgetIds }: Props)
                         type="checkbox"
                         name="link_budget_account_ids"
                         value={b.id}
-                        defaultChecked={checked}
+                        checked={checked}
+                        onChange={(e) => toggleLink(b.id, e.target.checked)}
                         className="h-4 w-4 accent-primary"
                       />
                       <span className="text-[14px] text-ink flex-1">{b.name}</span>
